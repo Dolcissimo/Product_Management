@@ -1,0 +1,59 @@
+package Assigment_Test01.product.management.presentation;
+
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import Assigment_Test01.product.management.presentation.ErrorMessage;
+
+import java.lang.reflect.Field;
+import jakarta.validation.Path;
+import java.util.List;
+import java.util.Set;
+
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ErrorMessage> handleConstraintViolatedException(
+            ConstraintViolationException ex
+    ) {
+        //예외처리
+        Set<ConstraintViolation<?>> constraintViolations = ex.getConstraintViolations();
+        List<String> errors = constraintViolations.stream().map(
+                constraintViolation -> extractField(constraintViolation.getPropertyPath())
+                        + ", "+
+                        constraintViolation.getMessage()
+        )
+                .toList();
+
+
+        ErrorMessage errorMessage = new ErrorMessage(errors);
+        return new ResponseEntity<>(errorMessage, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public  ResponseEntity<ErrorMessage> handleMethodArgumentNotValidException(
+            MethodArgumentNotValidException ex
+    ) {
+        List<FieldError> fieldErrors = ex.getBindingResult().getFieldErrors();
+        List<String> errors = fieldErrors.stream().map(fieldError -> fieldError.getDefaultMessage()
+        )
+                .toList();
+
+        ErrorMessage errorMessage = new ErrorMessage(errors);
+        return new ResponseEntity<>(errorMessage, HttpStatus.BAD_REQUEST);
+    }
+
+    private String extractField(Path path) {
+        String[] splittedArray = path.toString().split("[.]");
+        int lastIndex = splittedArray.length -1;
+        return splittedArray[lastIndex];
+    }
+
+
+}
